@@ -42,11 +42,11 @@ public class Sale {
     }
 
     private void addToTotal(Detail detail) {
-        total = total.add(detail.value());
+        total = total.add(detail.price().multiply(new BigDecimal(detail.quantity())));
     }
 
-    public void pay(String account, long timestamp, BigDecimal amount) {
-        payments.add(new Payment(account, timestamp, amount));
+    public void pay(String account, BigDecimal amount) {
+        payments.add(new Payment(account, amount));
     }
 
     public BigDecimal balance() {
@@ -79,8 +79,12 @@ public class Sale {
             return new Detail(item, quantity, price);
         }
 
-        public BigDecimal value() {
-            return price.multiply(new BigDecimal(quantity));
+        public BigDecimal price() {
+            return price;
+        }
+
+        public int quantity() {
+            return quantity;
         }
     }
 
@@ -121,13 +125,15 @@ public class Sale {
 
     private class Payment {
         private final String account;
-        private final long timestamp;
         private final BigDecimal amount;
 
-        public Payment(String account, long timestamp, BigDecimal amount) {
+        public Payment(String account, BigDecimal amount) {
             this.account = account;
-            this.timestamp = timestamp;
             this.amount = amount;
+        }
+
+        public String account() {
+            return account;
         }
 
         public BigDecimal amount() {

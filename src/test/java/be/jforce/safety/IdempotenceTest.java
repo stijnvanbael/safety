@@ -37,10 +37,9 @@ public class IdempotenceTest {
     @Test
     public void repeatableMutations() {
         String account = "1234567890";
-        long timestamp = System.currentTimeMillis();
         BigDecimal amount = new BigDecimal("429.80");
-        sale.pay(account, timestamp, amount);
-        sale.pay(account, timestamp, amount);
+        sale.pay(account, amount);
+        sale.pay(account, amount);
 
         assertThat(sale.balance(), is(new BigDecimal("0.00")));
     }

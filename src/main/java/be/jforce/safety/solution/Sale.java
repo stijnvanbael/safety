@@ -1,8 +1,7 @@
 package be.jforce.safety.solution;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Sale {
     private List<Detail> details;
@@ -10,11 +9,9 @@ public class Sale {
     private String location;
     private String cashier;
     private String customer;
-    private BigDecimal total = BigDecimal.ZERO;
-    private BigDecimal paid = BigDecimal.ZERO;
 
     public List<Detail> details() {
-        return details;
+        return Collections.unmodifiableList(details);
     }
 
     public String location() {
@@ -30,23 +27,37 @@ public class Sale {
     }
 
     public Sale add(Detail detail) {
-        details.add(detail);
-        return this;
+        List<Detail> newDetails = new ArrayList<Detail>(details);
+        newDetails.add(detail);
+        return Sale.newBuilder()
+                .cashier(cashier)
+                .customer(customer)
+                .location(location)
+                .details(newDetails)
+                .build();
     }
 
     public BigDecimal total() {
+        BigDecimal total = BigDecimal.ZERO;
         for (Detail detail : details) {
-            addToTotal(detail);
+            total = total.add(detail.value());
         }
         return total;
     }
 
-    private void addToTotal(Detail detail) {
-        total = total.add(detail.value());
+    public void pay(String account, long timestamp, BigDecimal amount) {
+        if (!containsPayment(account, timestamp)) {
+            payments.add(new Payment(account, timestamp, amount));
+        }
     }
 
-    public void pay(String account, long timestamp, BigDecimal amount) {
-        payments.add(new Payment(account, timestamp, amount));
+    private boolean containsPayment(String account, long timestamp) {
+        for (Payment payment : payments) {
+            if (payment.account().equals(account) && payment.timestamp() == timestamp) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public BigDecimal balance() {
@@ -54,17 +65,15 @@ public class Sale {
     }
 
     private BigDecimal paid() {
-        for(Payment payment : payments) {
-            addToPaid(payment);
+        BigDecimal paid = BigDecimal.ZERO;
+        for (Payment payment : payments) {
+            paid = paid.add(payment.amount());
         }
         return paid;
     }
 
-    private void addToPaid(Payment payment) {
-        paid = paid.add(payment.amount());
-    }
-
     public static class Detail {
+        private static final Map<String, Detail> CACHE = new HashMap<String, Detail>();
         private String item;
         private int quantity;
         private BigDecimal price;
@@ -76,7 +85,13 @@ public class Sale {
         }
 
         public static Detail create(String item, int quantity, BigDecimal price) {
-            return new Detail(item, quantity, price);
+            String key = item + "/" + quantity + "/" + price;
+            if (CACHE.containsKey(key)) {
+                return CACHE.get(key);
+            }
+            Detail detail = new Detail(item, quantity, price);
+            CACHE.put(key, detail);
+            return detail;
         }
 
         public BigDecimal value() {
@@ -95,7 +110,7 @@ public class Sale {
         private Sale instance = new Sale();
 
         public Builder details(List<Detail> details) {
-            instance.details = details;
+            instance.details = new ArrayList<Detail>(details);
             return this;
         }
 
@@ -115,7 +130,9 @@ public class Sale {
         }
 
         public Sale build() {
-            return instance;
+            Sale result = instance;
+            instance = new Sale();
+            return result;
         }
     }
 
@@ -132,6 +149,14 @@ public class Sale {
 
         public BigDecimal amount() {
             return amount;
+        }
+
+        public String account() {
+            return account;
+        }
+
+        public long timestamp() {
+            return timestamp;
         }
     }
 }
